@@ -1,5 +1,5 @@
 # Planet Physics with SDFs Version 1.0.0 3b4
-This project uses JavaScript and WebGL to create signed distance fields as planets. They are inspired by Super Mario Galaxy and Planetary Annihilation. In this demo there are three SDF planets (a plane, sphere, and box) and there are plenty more you could try. Also you can combine planets with the Union, Subtract, and Intersect functions. All that is needed to move around a planet is gravity and a normal vector pointing away from the planet’s surface.
+This project uses JavaScript and WebGL to create signed distance field planets. This code is inspired by Super Mario Galaxy and Planetary Annihilation. There are three SDF planets I created (a plane, sphere, and box) but there are plenty more you could try. Also try combining planets with the Union, Subtract, and Intersect functions. All that is needed to create a working planet is gravity and normal vectors pointing away from the shape’s surface.
 
 Keyboard Controls
 
@@ -9,6 +9,6 @@ Test it out here: https://tigerfusion.github.io/SDF-Planets/
 
 Lessons Learned
 
-For rotation use Matrices or Quaternions. If you are sending in Euler angles you are fine but there are all kinds of problems extracting an Euler angle from other types of rotation. This project uses a motion function I made called matrixMotion() but could easily be tweaked for quaternions. 
+For rotation use Matrices or Quaternions not Euler. If you are importing Euler angles you are fine but you will find all kinds of problems returning Euler angles. This project's motion is a matrix function I made called matrixMotion() in world.js but could easily be tweaked for quaternions. 
 
-If you are wondering how long it took to figure this out it took me almost a year worth of spare time.
+If you are wondering how long it took to figure this out it took me almost a year of extra time.
