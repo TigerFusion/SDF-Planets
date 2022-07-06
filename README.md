@@ -5,6 +5,8 @@ Keyboard Controls
 
 Use the up down left right arrow keys to move the spaceship. Use spacebar to switch between SDF planets. Click and drag the mouse to rotate the scene.
 
+Test it out here: https://tigerfusion.github.io/SDF-Planets/
+
 Lessons Learned
 
 For rotation use Matrices or Quaternions. If you are sending in Euler angles you are fine but there are all kinds of problems extracting an Euler angle from other types of rotation. This project uses a motion function I made called matrixMotion() but could easily be tweaked for quaternions. 
