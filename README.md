@@ -3,7 +3,7 @@ This project uses JavaScript and WebGL to create signed distance field planets. 
 
 Keyboard Controls
 
-Use the up down left right arrow keys to move the spaceship. Use spacebar to switch between SDF planets. Click and drag the mouse to rotate the scene.
+Use the up, down, left, and right arrow keys to move and spacebar to switch between SDF planets. Click and drag the mouse to rotate the scene.
 
 Test it out here: https://tigerfusion.github.io/SDF-Planets/
 
