@@ -137,37 +137,43 @@ function mat4Frustum(matrix, left, right, bottom, top, near, far)
     ], matrix);
 }
 
+// This matrix uses YXZ matrix
 function mat4EulerAngle(oldMatrix, radians)
 {
-	let matrix = [];
+	const matrix = [];
 	
-	let c1 = Math.cos(-radians[0]);
-	let c2 = Math.cos(-radians[1]);
-	let c3 = Math.cos(-radians[2]);
-	let s1 = Math.sin(-radians[0]);
-	let s2 = Math.sin(-radians[1]);
-	let s3 = Math.sin(-radians[2]);
+	// This matrix uses YXZ matrix
+	// Yaw = Y, Pitch = X, Roll = Z
+	const cosY = Math.cos(radians[1]); // Yaw
+	const sinY = Math.sin(radians[1]);
 
-	matrix[0] = c2 * c3;
-	matrix[1] =-c1 * s3 + s1 * s2 * c3;
-	matrix[2] = s1 * s3 + c1 * s2 * c3;
+	const cosP = Math.cos(radians[0]); // Pitch
+	const sinP = Math.sin(radians[0]);
+
+    const cosR = Math.cos(radians[2]); // Roll
+    const sinR = Math.sin(radians[2]);
+	
+	// Matrix is column major and cos/sin are Row Major aka Row|Column 
+	matrix[0] = cosY * cosR + sinY * sinP * sinR; // 11
+	matrix[1] = cosR * sinY * sinP - sinR * cosY; // 12
+	matrix[2] = cosP * sinY; // 13
 	matrix[3] = 0;
 
-	matrix[4] = c2 * s3;
-	matrix[5] = c1 * c3 + s1 * s2 * s3;
-	matrix[6] =-s1 * c3 + c1 * s2 * s3;
+	matrix[4] = cosP * sinR; // 21
+	matrix[5] = cosR * cosP; // 22
+	matrix[6] = -sinP; // 23
 	matrix[7] = 0;
 	
-	matrix[8] =-s2;
-	matrix[9] = s1 * c2;
-	matrix[10] = c1 * c2;
+	matrix[8] = sinR * cosY * sinP - sinY * cosR; // 31
+	matrix[9] = sinY * sinR + cosR * cosY * sinP; // 32
+	matrix[10] = cosP * cosY; // 33
 	matrix[11] = 0;
 	
 	matrix[12] = 0;
 	matrix[13] = 0;
 	matrix[14] = 0;
 	matrix[15] = 1;
-
+	
 	return mat4Multiply(matrix, oldMatrix);
 }
 
@@ -213,6 +219,25 @@ function mat4Translation(matrix, position)
 	], matrix);
 }
 
+function matTranspose(matrix, rows, cols)
+{
+	let transposeMatrix = [];
+	
+	for (let i = 0; i < rows * cols; i++)
+	{
+		// This needs to be converted to integers
+		let row = parseInt(i / rows);
+		let col = parseInt(i % rows);
+		transposeMatrix[i] = matrix[cols * col + row];
+	}
+	
+	return transposeMatrix;
+}
+
+function mat3Transpose(matrix)
+{
+	return matTranspose(matrix, 3, 3);
+}
 
 function getWebGLContext(canvas)
 {
@@ -293,66 +318,4 @@ function loadShader(gl, type, source)
 	}
 
 	return shader;
-}
-
-/*
- * Copyright 2010, Google Inc.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * Provides requestAnimationFrame in a cross browser
- * way.
- */
-if (!window.requestAnimationFrame) {
-  window.requestAnimationFrame = (function() {
-    return window.requestAnimationFrame ||
-           window.webkitRequestAnimationFrame ||
-           window.mozRequestAnimationFrame ||
-           window.oRequestAnimationFrame ||
-           window.msRequestAnimationFrame ||
-           function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
-             window.setTimeout(callback, 1000/60);
-           };
-  })();
-}
-
-/** * ERRATA: 'cancelRequestAnimationFrame' renamed to 'cancelAnimationFrame' to reflect an update to the W3C Animation-Timing Spec. 
- * 
- * Cancels an animation frame request. 
- * Checks for cross-browser support, falls back to clearTimeout. 
- * @param {number}  Animation frame request. */
-if (!window.cancelAnimationFrame) {
-  window.cancelAnimationFrame = (window.cancelRequestAnimationFrame ||
-                                 window.webkitCancelAnimationFrame || window.webkitCancelRequestAnimationFrame ||
-                                 window.mozCancelAnimationFrame || window.mozCancelRequestAnimationFrame ||
-                                 window.msCancelAnimationFrame || window.msCancelRequestAnimationFrame ||
-                                 window.oCancelAnimationFrame || window.oCancelRequestAnimationFrame ||
-                                 window.clearTimeout);
 }

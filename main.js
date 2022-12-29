@@ -156,7 +156,10 @@ function Project(cpuNode, fpsNode, canvas)
 	this.dragAngleY = 0;
 	this.offsetX = 0;
 	this.offsetY = 0;
+	// MARK: First Planet
 	this.displayPlanet = 0;
+	//this.displayPlanet = 1;
+	//this.displayPlanet = 2;
 	
 	// Frames per second
 	this.frameLoop =
@@ -269,6 +272,9 @@ Project.prototype.update = function(world)
 		
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		
+		gl.useProgram(self.shaderProgram);
+		gl.enableVertexAttribArray(self.shaderProgram.a_Position);
+		
 		let modelViewMatrix = null;
 		
 	// MARK: Yellow Wire Box Planet
@@ -280,9 +286,6 @@ Project.prototype.update = function(world)
 			modelViewMatrix = mat4Translation(modelViewMatrix, [0, 0, 10]);
 			
 			modelViewMatrix = world.planet.updatePlanetBox(modelViewMatrix, frameLoop.timeStep);
-			
-			gl.useProgram(self.shaderProgram);
-			gl.enableVertexAttribArray(self.shaderProgram.a_Position);
 			
 			gl.uniformMatrix4fv(self.shaderProgram.u_ModelViewMatrix, false, modelViewMatrix);
 			gl.uniformMatrix4fv(self.shaderProgram.u_ProjectionMatrix, false, self.projectionMatrix);
@@ -319,10 +322,7 @@ Project.prototype.update = function(world)
 			modelViewMatrix = mat4Translation(modelViewMatrix, [0, 0, 10]);
 			
 			modelViewMatrix = world.planet.updatePlanetSphere(modelViewMatrix, frameLoop.timeStep);
-			
-			gl.useProgram(self.shaderProgram);
-			gl.enableVertexAttribArray(self.shaderProgram.a_Position);
-			
+						
 			gl.uniformMatrix4fv(self.shaderProgram.u_ModelViewMatrix, false, modelViewMatrix);
 			gl.uniformMatrix4fv(self.shaderProgram.u_ProjectionMatrix, false, self.projectionMatrix);
 
@@ -358,10 +358,7 @@ Project.prototype.update = function(world)
 			modelViewMatrix = mat4Translation(modelViewMatrix, [0, 0, 10]);
 			
 			modelViewMatrix = world.planet.updatePlanetPlane(modelViewMatrix, frameLoop.timeStep);
-			
-			gl.useProgram(self.shaderProgram);
-			gl.enableVertexAttribArray(self.shaderProgram.a_Position);
-			
+						
 			gl.uniformMatrix4fv(self.shaderProgram.u_ModelViewMatrix, false, modelViewMatrix);
 			gl.uniformMatrix4fv(self.shaderProgram.u_ProjectionMatrix, false, self.projectionMatrix);
 
@@ -389,18 +386,28 @@ Project.prototype.update = function(world)
 			gl.drawElements(gl.LINES, self.wirePlaneSpaceship.indicesLength, gl.UNSIGNED_SHORT, 0);
 		}
 		
-// Start line for Ship Sphere segment code
+	// MARK: Axis Lines for Spaceship Sphere
 		modelViewMatrix = mat4Translation(mat4Identity(), [0, 0,-10]);
 		modelViewMatrix = mat4AxisAngle(modelViewMatrix, [1, 0, 0], radiansFromDegrees(self.dragAngleX));
 		modelViewMatrix = mat4AxisAngle(modelViewMatrix, [0, 1, 0], radiansFromDegrees(self.dragAngleY));
 		modelViewMatrix = mat4Translation(modelViewMatrix, [0, 0, 10]);
 	
-		modelViewMatrix = mat4Translation(modelViewMatrix, world.planet.shipPosition);
-	
+		modelViewMatrix = mat4Translation(modelViewMatrix, world.planet.cameraStartPosition);
+
+		// This keeps the axes centered correctly whether inverted or not
+		if (world.planet.inverted === true)
+		{
+			modelViewMatrix = mat4EulerAngle(modelViewMatrix, world.planet.shipAngle);
+		}
+		else
+		{
+			modelViewMatrix = mat4Translation(modelViewMatrix, world.planet.shipPosition);
+		}
+		
 		gl.uniformMatrix4fv(self.shaderProgram.u_ModelViewMatrix, false, modelViewMatrix);
 
 	// Green Line forward Axis
-		self.wireVector = lineWire(gl, [0,0,0], vec3MultiplyScalar(world.planet.forwardAxis, -1));
+		self.wireVector = lineWire(gl, [0,0,0], vec3MultiplyScalar(world.planet.forwardAxis,-1));
 		
 		gl.uniform4f(self.shaderProgram.u_Color, 0, 1, 0, 1);
 		gl.bindBuffer(gl.ARRAY_BUFFER, self.wireVector.vertexBuffer);
@@ -413,7 +420,7 @@ Project.prototype.update = function(world)
 		gl.deleteBuffer(self.wireVector.indexBuffer);
 
 	// Red line right axis
-		self.wireVector = lineWire(gl, [0,0,0], vec3Normalize(world.planet.rightAxis));
+		self.wireVector = lineWire(gl, [0,0,0], world.planet.rightAxis);
 
 		gl.uniform4f(self.shaderProgram.u_Color, 1, 0, 0, 1);
 		gl.bindBuffer(gl.ARRAY_BUFFER, self.wireVector.vertexBuffer);
@@ -426,7 +433,7 @@ Project.prototype.update = function(world)
 		gl.deleteBuffer(self.wireVector.indexBuffer);
 
 	// Blue line up Axis
-		self.wireVector = lineWire(gl, [0,0,0], vec3Normalize(world.planet.upAxis));
+		self.wireVector = lineWire(gl, [0,0,0], world.planet.upAxis);
 
 		gl.uniform4f(self.shaderProgram.u_Color, 0, 0, 1, 1);
 		gl.bindBuffer(gl.ARRAY_BUFFER, self.wireVector.vertexBuffer);
@@ -446,12 +453,12 @@ Project.prototype.update = function(world)
 
 function boxWire(gl, halfSize)
 {
-	let verticesArray = [];
-	let indicesArray = [];
+	const verticesArray = [];
+	const indicesArray = [];
 
-	let widthExtent = halfSize[0] + 0.01;
-	let heightExtent = halfSize[1] + 0.01;
-	let lengthExtent = halfSize[2] + 0.01;
+	const widthExtent = halfSize[0] + 0.01;
+	const heightExtent = halfSize[1] + 0.01;
+	const lengthExtent = halfSize[2] + 0.01;
 
 	// Front
 	verticesArray.push(widthExtent);
@@ -526,7 +533,7 @@ function boxWire(gl, halfSize)
 	indicesArray.push(3);
 	indicesArray.push(7);
 
-	let wireBoxBuffers =
+	const wireBoxBuffers =
 	{
 		type:"BoxWire",
 		vertexBuffer:gl.createBuffer(),
@@ -545,10 +552,10 @@ function boxWire(gl, halfSize)
 
 function sphereWire(gl, radius)
 {
-	let verticesArray = [];
-	let indicesArray = [];
+	const verticesArray = [];
+	const indicesArray = [];
 
-	let segments = 12;
+	const segments = 12;
 	
 	radius += 0.03;
 	
@@ -615,7 +622,7 @@ function sphereWire(gl, radius)
 		}
 	}
 
-	let wireSphereBuffers =
+	const wireSphereBuffers =
 	{
 		type:"SphereWire",
 		vertexBuffer:gl.createBuffer(),
@@ -634,10 +641,7 @@ function sphereWire(gl, radius)
 
 function planeWire(gl)
 {
-	let verticesArray = [];
-	let indicesArray = [];
-
-	verticesArray =
+	const verticesArray =
 	[
 		-20, 0, 0,
 		 20, 0, 0,
@@ -649,9 +653,9 @@ function planeWire(gl)
 		-0.5, 0.5, 0
 	];
 
-	indicesArray = [0, 1, 2, 3, 4, 5, 6, 7];
+	const indicesArray = [0, 1, 2, 3, 4, 5, 6, 7];
 
-	let planeBuffers =
+	const planeBuffers =
 	{
 		type:"PlaneWire",
 		vertexBuffer:gl.createBuffer(),
@@ -670,7 +674,7 @@ function planeWire(gl)
 
 function lineWire(gl, point1, point2)
 {
-	let verticesArray = [];
+	const verticesArray = [];
 	
 	verticesArray.push(point1[0]);
 	verticesArray.push(point1[1]);
@@ -680,9 +684,9 @@ function lineWire(gl, point1, point2)
 	verticesArray.push(point2[1]);
 	verticesArray.push(point2[2]);
 
-	let indicesArray = [0,1];
+	const indicesArray = [0,1];
 	
-	let wireLineBuffers =
+	const wireLineBuffers =
 	{
 		type:"LineWire",
 		vertexBuffer:gl.createBuffer(),

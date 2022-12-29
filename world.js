@@ -5,21 +5,21 @@ function World(project)
 	this.planetExtents = project.planetExtents;
 	this.planetRadius = project.planetRadius;
 	this.shipRadius = project.shipRadius;
-	
-	this.keyboardForwardBackward = 0;
-	this.keyboardRotateLeftRight = 0;
-	
+		
+	// MARK: First Planet
 	this.planet = new PlanetPlane(this);
+	//this.planet = new PlanetSphere(this);
+	//this.planet = new PlanetBox(this);
+	this.planet.inverted = false;
 	
 	// Keyboard stuff
-	let self = this;
-	
+	const self = this;
+		
 	document.addEventListener("keydown", function(event)
 	{
 		// Key Down alert (keep this)
 		//alert("event: " + event.code + " " + event.which + " " + event.key + " " + event.keyCode);
 	 
-		// Note that both rotation and translation values work opposite of OpenGL
 		switch (event.key)
 		{
 			case " ":
@@ -29,42 +29,57 @@ function World(project)
 				{
 					project.displayPlanet = 0;
 				}
-				
+								
 				if (project.displayPlanet === 0)
 				{
 					self.planet = null;
 					self.planet = new PlanetPlane(self);
+					self.planet.inverted = false;
 				}
 				else if (project.displayPlanet === 1)
 				{
 					self.planet = null;
 					self.planet = new PlanetSphere(self);
+					self.planet.inverted = false;
 				}
 				else if (project.displayPlanet === 2)
 				{
 					self.planet = null;
 					self.planet = new PlanetBox(self);
+					self.planet.inverted = false;
 				}
 			break;
-		
+
+			case "i": // i
+				self.planet.inverted = !self.planet.inverted;
+			break;			
+
+			case "q": // q
+				self.planet.keyboardLeftRight =-2;
+			break;
+			
+			case "e": // e
+				self.planet.keyboardLeftRight = 2;
+			break;
+					
 			case "w": // w
 			case "ArrowUp": // ArrowUp
-				self.planet.keyboardForwardBackward =-1;
+				self.planet.keyboardForwardBackward =-4;
 			break;
 	 
 			case "s": // s
 			case "ArrowDown": // ArrowDown
-				self.planet.keyboardForwardBackward = 1;
+				self.planet.keyboardForwardBackward = 4;
+			break;
+
+			case "d": // d
+			case "ArrowRight": // ArrowRight
+				self.planet.keyboardRotateLeftRight =-1;
 			break;
 	 
 			case "a": // a
 			case "ArrowLeft": // ArrowLeft
 				self.planet.keyboardRotateLeftRight = 1;
-			break;
-	 
-			case "d": // d
-			case "ArrowRight": // ArrowRight
-				self.planet.keyboardRotateLeftRight =-1;
 			break;
 		}
 	}, false);
@@ -77,6 +92,11 @@ function World(project)
 		// 0 is x and 1 is y
 		switch (event.key)
 		{
+			case "q": // q
+			case "e": // e
+				self.planet.keyboardLeftRight = 0;
+			break;
+			
 			case "w": // w
 			case "ArrowUp": // ArrowUp
 			case "s": // s
@@ -98,18 +118,19 @@ function PlanetBox(world)
 {
 	this.keyboardForwardBackward = 0;
 	this.keyboardRotateLeftRight = 0;
+	this.keyboardUpDown = 0;
+	this.keyboardLeftRight = 0;
 
 // Box Planet
 	this.planetExtents = world.planetExtents;
-	this.planetPosition = [0,0,-10]; // [0,0,-10]
+	this.planetPosition = [0,0,0]; // [0,0,-10]
 	this.planetAngle = [0,0,0];
 // Box SpaceShip
 	this.shipRadius = world.shipRadius;
-	this.shipPosition = [0,this.shipRadius + this.planetExtents[1] + 2,-10]; // [0,5,-10]
+	this.shipPosition = [0,this.shipRadius + this.planetExtents[1] + 2,0]; // [0,5,-10]
 	this.shipVelocity = [0,0,0];
 	
 	this.shipAngle = [0,0,0];
-	this.shipAngularVelocity = [0,0,0];
 	
 	this.gravityAcceleration = [0,0,0];
 	this.gravityVelocity = [0,0,0];
@@ -121,14 +142,26 @@ function PlanetBox(world)
 	this.upAxis = [0,1,0];
 	this.forwardAxis = [0,0,1];
 	
-	this.shipRotateVelocity = 0;
+	this.cameraStartPosition = [0,0,-10];
 }
 
 PlanetBox.prototype.updatePlanetBox = function(modelViewMatrix, timeStep)
 {
-	modelViewMatrix = mat4Translation(modelViewMatrix, this.planetPosition);
-	modelViewMatrix = mat4EulerAngle(modelViewMatrix, this.planetAngle);
-	
+	modelViewMatrix = mat4Translation(modelViewMatrix, this.cameraStartPosition);
+			
+// **** Inverted Motion ****
+	if (this.inverted === true)
+	{
+		let matrix = mat4EulerAngle(mat4Identity(), this.shipAngle);
+		matrix = mat4Translation(matrix, vec3MultiplyScalar(this.shipPosition,-1));
+		this.playerPosition = vec3TranslationMat4(matrix);
+		this.playerAngle = this.shipAngle;
+
+		modelViewMatrix = mat4Translation(modelViewMatrix, this.playerPosition);
+		modelViewMatrix = mat4EulerAngle(modelViewMatrix, this.playerAngle);
+	}
+// **** Inverted Motion ****
+			
 	return modelViewMatrix;
 }
 
@@ -137,14 +170,14 @@ PlanetBox.prototype.updateBoxSpaceship = function(modelViewMatrix, timeStep)
 	// Point = tests how far the point is from the sdf
 	// sdf returns: inside = - | outside = + | surface = 0 |
 	// Position = the center of the sdf
-	let point = vec3Subtract(this.shipPosition, this.planetPosition);
-	let distance = sdfBox(point, this.planetExtents, this.shipRadius);
-	this.oldNormal = this.normal;
+	const point = vec3Subtract(this.shipPosition, this.planetPosition);
+	const distance = sdfBox(point, this.planetExtents, this.shipRadius);
 	this.normal = sdfBoxNormal(point, this.planetExtents, this.shipRadius);
+	
 	// Use the penetration vector to back the ship out of the planet it hit
-	let penetration = vec3MultiplyScalar(this.normal, distance);
+	const penetration = vec3MultiplyScalar(this.normal, distance);
 
-	let gravity =-10;
+	const gravity =-10;
 
 	this.gravityAcceleration = vec3MultiplyScalar(this.normal, gravity);
 	this.gravityVelocity = vec3Add(this.gravityVelocity, vec3MultiplyScalar(this.gravityAcceleration, timeStep));
@@ -156,26 +189,38 @@ PlanetBox.prototype.updateBoxSpaceship = function(modelViewMatrix, timeStep)
 		this.gravityVelocity = [0,0,0];
 	}
 	
-	return matrixMotion(modelViewMatrix, timeStep, this);
+	matrixMotion(timeStep, this);
+	modelViewMatrix = mat4Translation(modelViewMatrix, this.cameraStartPosition);
+	
+// **** Standard Motion ****
+	if (this.inverted === false)
+	{
+		modelViewMatrix = mat4Translation(modelViewMatrix, this.shipPosition);
+		modelViewMatrix = mat4EulerAngle(modelViewMatrix, this.shipAngle);
+	}
+// **** Standard Motion ****
+		
+	return modelViewMatrix;
 }
 
 function PlanetSphere(world)
 {
 	this.keyboardForwardBackward = 0;
 	this.keyboardRotateLeftRight = 0;
+	this.keyboardUpDown = 0;
+	this.keyboardLeftRight = 0;
 	
 // Sphere Planet
-	this.planetPosition = [0,0,-10]; // [0,0,-10]
+	this.planetPosition = [0,0,0]; // [0,0,-10]
 	this.planetAngle = [0,0,0];
 	this.planetRadius = world.planetRadius;
 	
 // Sphere Spaceship
 	this.shipRadius = world.shipRadius;
-	this.shipPosition = [0,this.shipRadius + this.planetRadius + 2,-10]; // [0,6,-10]
+	this.shipPosition = [0,this.shipRadius + this.planetRadius + 2,0]; // [0,6,-10]
 	this.shipVelocity = [0,0,0];
-
+	
 	this.shipAngle = [0,0,0];
-	this.shipAngularVelocity = [0,0,0];
 
 	this.gravityAcceleration = [0,0,0];
 	this.gravityVelocity = [0,0,0];
@@ -186,31 +231,41 @@ function PlanetSphere(world)
 	this.rightAxis = [1,0,0];
 	this.upAxis = [0,1,0];
 	this.forwardAxis = [0,0,1];
-	
-	this.shipRotateVelocity = 0;
+		
+	this.cameraStartPosition = [0,0,-10];
 }
 
 PlanetSphere.prototype.updatePlanetSphere = function(modelViewMatrix, timeStep)
 {
-	modelViewMatrix = mat4Translation(modelViewMatrix, this.planetPosition);
-	modelViewMatrix = mat4Translation(modelViewMatrix, this.planetAngle);
-	
+	modelViewMatrix = mat4Translation(modelViewMatrix, this.cameraStartPosition);
+		
+// **** Inverted Motion ****
+	if (this.inverted === true)
+	{
+		let matrix = mat4EulerAngle(mat4Identity(), this.shipAngle);
+		matrix = mat4Translation(matrix, vec3MultiplyScalar(this.shipPosition,-1));
+		this.playerPosition = vec3TranslationMat4(matrix);
+		this.playerAngle = this.shipAngle;
+
+		modelViewMatrix = mat4Translation(modelViewMatrix, this.playerPosition);
+		modelViewMatrix = mat4EulerAngle(modelViewMatrix, this.playerAngle);
+	}
+// **** Inverted Motion ****
 	return modelViewMatrix;
 }
 
-// Convert polar coordinates to cartesian
 PlanetSphere.prototype.updateSphereSpaceship = function(modelViewMatrix, timeStep)
 {
 	// Point = tests how far the point is from the sdf
 	// sdf returns: inside = - | outside = + | surface = 0 |
 	// Position = the center of the sdf
-	let radius = this.shipRadius + this.planetRadius;
-	let point = vec3Subtract(this.shipPosition, this.planetPosition);
-	let distance = sdfSphere(point, radius);
-	this.oldNormal = this.normal;
+	const radius = this.shipRadius + this.planetRadius;
+	const point = vec3Subtract(this.shipPosition, this.planetPosition);
+	const distance = sdfSphere(point, radius);
+	
 	this.normal = sdfSphereNormal(point, radius);
 	// Use the penetration vector to back the ship out of the planet it hit
-	let penetration = vec3MultiplyScalar(this.normal, distance);
+	const penetration = vec3MultiplyScalar(this.normal, distance);
 	
 	let gravity =-10;
 	this.gravityAcceleration = vec3MultiplyScalar(this.normal, gravity);
@@ -222,28 +277,39 @@ PlanetSphere.prototype.updateSphereSpaceship = function(modelViewMatrix, timeSte
 		this.shipPosition = vec3Subtract(this.shipPosition, penetration);
 		this.gravityVelocity = [0,0,0];
 	}
+		
+	matrixMotion(timeStep, this);
+	modelViewMatrix = mat4Translation(modelViewMatrix, this.cameraStartPosition);
 	
-	return matrixMotion(modelViewMatrix, timeStep, this);
+// **** Standard Motion ****
+	if (this.inverted === false)
+	{
+		modelViewMatrix = mat4Translation(modelViewMatrix, this.shipPosition);
+		modelViewMatrix = mat4EulerAngle(modelViewMatrix, this.shipAngle);
+	}
+// **** Standard Motion ****
+	return modelViewMatrix;
 }
 
 function PlanetPlane(world)
 {
 	this.keyboardForwardBackward = 0;
 	this.keyboardRotateLeftRight = 0;
+	this.keyboardUpDown = 0;
+	this.keyboardLeftRight = 0;
 
 // Plane Planet
-	this.planetPosition = [0,0,-10];
+	this.planetPosition = [0,0,0];
 	this.planetAngle = [0,0,0];
 	this.planetDistance = 0;
 	this.planetNormal = [0,1,0];
-
+	
 // Plane Spaceship
 	this.shipRadius = world.shipRadius;
-	this.shipPosition = [0,this.shipRadius + 2,-10];
+	this.shipPosition = [0,this.shipRadius + 2,0];
 	this.shipVelocity = [0,0,0];
 
-	this.shipAngle = [0,0,0]; 
-	this.shipAngularVelocity = [0,0,0];
+	this.shipAngle = [0,0,0];
 
 	this.gravityAcceleration = [0,0,0];
 	this.gravityVelocity = [0,0,0]
@@ -255,7 +321,7 @@ function PlanetPlane(world)
 	this.upAxis = [0,1,0];
 	this.forwardAxis = [0,0,1];
 	
-	this.shipRotateVelocity = 0;
+	this.cameraStartPosition = [0,0,-10];
 }
 
 PlanetPlane.prototype.updatePlanetPlane = function(modelViewMatrix, timeStep)
@@ -265,21 +331,31 @@ PlanetPlane.prototype.updatePlanetPlane = function(modelViewMatrix, timeStep)
 	this.planetNormal = vec3TranslationMat4(matrix);
 	this.planetDistance = -dotProductVec3(this.normal, this.planetPosition);
 	
-	modelViewMatrix = mat4Translation(modelViewMatrix, this.planetPosition);
-	modelViewMatrix = mat4EulerAngle(modelViewMatrix, this.planetAngle);
-	
+	modelViewMatrix = mat4Translation(modelViewMatrix, this.cameraStartPosition);
+			
+	// **** Inverted Motion ****
+	if (this.inverted === true)
+	{
+		matrix = mat4EulerAngle(mat4Identity(), this.shipAngle);
+		matrix = mat4Translation(matrix, vec3MultiplyScalar(this.shipPosition,-1));
+		this.playerPosition = vec3TranslationMat4(matrix);
+		this.playerAngle = this.shipAngle;
+
+		modelViewMatrix = mat4Translation(modelViewMatrix, this.playerPosition);
+		modelViewMatrix = mat4EulerAngle(modelViewMatrix, this.playerAngle);
+	}
+	// **** Inverted Motion ****
+		
 	return modelViewMatrix;
 }
 
-// Convert polar coordinates to cartesian
 PlanetPlane.prototype.updatePlaneSpaceship = function(modelViewMatrix, timeStep)
 {
 	// Point = tests how far the point is from the sdf
 	// sdf returns: inside = - | outside = + | surface = 0 |
 	// Position = the center of the sdf
-	let point = this.shipPosition;
-	let distance = sdfPlane(point, this.planetNormal, this.planetDistance) - this.shipRadius;
-	this.oldNormal = this.normal;
+	const point = this.shipPosition;
+	const distance = sdfPlane(point, this.planetNormal, this.planetDistance) - this.shipRadius;
 	this.normal = sdfPlaneNormal(point, this.planetNormal, this.planetDistance);
 	// Use the penetration vector to back the ship out of the planet it hit
 	let penetration = vec3MultiplyScalar(this.normal, distance);
@@ -297,7 +373,18 @@ PlanetPlane.prototype.updatePlaneSpaceship = function(modelViewMatrix, timeStep)
 		this.gravityVelocity = [0,0,0];
 	}
 	
-	return matrixMotion(modelViewMatrix, timeStep, this);
+	matrixMotion(timeStep, this);
+	modelViewMatrix = mat4Translation(modelViewMatrix, this.cameraStartPosition);
+	
+// **** Standard (Works) ****
+	if (this.inverted === false)
+	{
+		modelViewMatrix = mat4Translation(modelViewMatrix, this.shipPosition);
+		modelViewMatrix = mat4EulerAngle(modelViewMatrix, this.shipAngle);
+	}
+// **** Standard (Works) ****
+	
+	return modelViewMatrix;
 }
 
 // MARK: - SDF Shapes
@@ -310,7 +397,7 @@ PlanetPlane.prototype.updatePlaneSpaceship = function(modelViewMatrix, timeStep)
 
 function sdfBox(point, extents, radius)
 {
-	let q = [];
+	const q = [];
 	
 	q[0] = Math.abs(point[0]) - extents[0];
 	q[1] = Math.abs(point[1]) - extents[1];
@@ -321,16 +408,16 @@ function sdfBox(point, extents, radius)
 
 function sdfBoxNormal(point, extents, radius)
 {
-	let epsilon = [0.0001, 0];
+	const epsilon = [0.0001, 0];
 	
-	let xscenep = sdfBox(vec3Add(point, [epsilon[0], epsilon[1], epsilon[1]]), extents, radius);
-	let xscenen = sdfBox(vec3Subtract(point, [epsilon[0], epsilon[1], epsilon[1]]), extents, radius);
+	const xscenep = sdfBox(vec3Add(point, [epsilon[0], epsilon[1], epsilon[1]]), extents, radius);
+	const xscenen = sdfBox(vec3Subtract(point, [epsilon[0], epsilon[1], epsilon[1]]), extents, radius);
 	
-	let yscenep = sdfBox(vec3Add(point, [epsilon[1], epsilon[0], epsilon[1]]), extents, radius);
-	let yscenen = sdfBox(vec3Subtract(point, [epsilon[1], epsilon[0], epsilon[1]]), extents, radius);
+	const yscenep = sdfBox(vec3Add(point, [epsilon[1], epsilon[0], epsilon[1]]), extents, radius);
+	const yscenen = sdfBox(vec3Subtract(point, [epsilon[1], epsilon[0], epsilon[1]]), extents, radius);
 	
-	let zscenep = sdfBox(vec3Add(point, [epsilon[1], epsilon[1], epsilon[0]]), extents, radius);
-	let zscenen = sdfBox(vec3Subtract(point, [epsilon[1], epsilon[1], epsilon[0]]), extents, radius);
+	const zscenep = sdfBox(vec3Add(point, [epsilon[1], epsilon[1], epsilon[0]]), extents, radius);
+	const zscenen = sdfBox(vec3Subtract(point, [epsilon[1], epsilon[1], epsilon[0]]), extents, radius);
 	
     return vec3Normalize([xscenep - xscenen, yscenep - yscenen, zscenep - zscenen]);
 }
@@ -343,16 +430,16 @@ function sdfSphere(point, radius)
 
 function sdfSphereNormal(point, radius)
 {
-    let epsilon = [0.0001, 0];
+    const epsilon = [0.0001, 0];
 	
-	let xscenep = sdfSphere(vec3Add(point, [epsilon[0], epsilon[1], epsilon[1]]), radius);
-	let xscenen = sdfSphere(vec3Subtract(point, [epsilon[0], epsilon[1], epsilon[1]]), radius);
+	const xscenep = sdfSphere(vec3Add(point, [epsilon[0], epsilon[1], epsilon[1]]), radius);
+	const xscenen = sdfSphere(vec3Subtract(point, [epsilon[0], epsilon[1], epsilon[1]]), radius);
 	
-	let yscenep = sdfSphere(vec3Add(point, [epsilon[1], epsilon[0], epsilon[1]]), radius);
-	let yscenen = sdfSphere(vec3Subtract(point, [epsilon[1], epsilon[0], epsilon[1]]), radius);
+	const yscenep = sdfSphere(vec3Add(point, [epsilon[1], epsilon[0], epsilon[1]]), radius);
+	const yscenen = sdfSphere(vec3Subtract(point, [epsilon[1], epsilon[0], epsilon[1]]), radius);
 	
-	let zscenep = sdfSphere(vec3Add(point, [epsilon[1], epsilon[1], epsilon[0]]), radius);
-	let zscenen = sdfSphere(vec3Subtract(point, [epsilon[1], epsilon[1], epsilon[0]]), radius);
+	const zscenep = sdfSphere(vec3Add(point, [epsilon[1], epsilon[1], epsilon[0]]), radius);
+	const zscenen = sdfSphere(vec3Subtract(point, [epsilon[1], epsilon[1], epsilon[0]]), radius);
 	
     return vec3Normalize([xscenep - xscenen, yscenep - yscenen, zscenep - zscenen]);
 }
@@ -368,31 +455,33 @@ function sdfPlane(point, normal, distance)
 
 function sdfPlaneNormal(point, normal, distance)
 {
-    let epsilon = 0.0001;
+    const epsilon = 0.0001;
 	
-	let xscenep = sdfPlane(vec3Add(point, [epsilon, 0, 0]), normal, distance);
-	let xscenen = sdfPlane(vec3Subtract(point, [epsilon, 0, 0]), normal, distance);
+	const xscenep = sdfPlane(vec3Add(point, [epsilon, 0, 0]), normal, distance);
+	const xscenen = sdfPlane(vec3Subtract(point, [epsilon, 0, 0]), normal, distance);
 	
-	let yscenep = sdfPlane(vec3Add(point, [0, epsilon, 0]), normal, distance);
-	let yscenen = sdfPlane(vec3Subtract(point, [0, epsilon, 0]), normal, distance);
+	const yscenep = sdfPlane(vec3Add(point, [0, epsilon, 0]), normal, distance);
+	const yscenen = sdfPlane(vec3Subtract(point, [0, epsilon, 0]), normal, distance);
 	
-	let zscenep = sdfPlane(vec3Add(point, [0, 0, epsilon]), normal, distance);
-	let zscenen = sdfPlane(vec3Subtract(point, [0, 0, epsilon]), normal, distance);
+	const zscenep = sdfPlane(vec3Add(point, [0, 0, epsilon]), normal, distance);
+	const zscenen = sdfPlane(vec3Subtract(point, [0, 0, epsilon]), normal, distance);
 	
     return vec3Normalize([xscenep - xscenen, yscenep - yscenen, zscenep - zscenen]);
 }
 
 // MARK: Spaceship Motion
-function matrixMotion(modelViewMatrix, timeStep, self)
-{
+function matrixMotion(timeStep, self)
+{	
 	// Craete an axis angle from the last normal and the current normal.
-	let angle = Math.acos(dotProductVec3(self.oldNormal, self.normal));
-	let axis = vec3Normalize(vec3CrossProduct(self.oldNormal, self.normal));
+	const angle = Math.acos(dotProductVec3(self.oldNormal, self.normal));
+	const axis = vec3Normalize(vec3CrossProduct(self.oldNormal, self.normal));
+	self.oldNormal = self.normal;
 	
+	let matrix = mat4Identity();
 	// Rotate the spaceship when a keyboard key is pressed.
-	self.shipRotateVelocity = self.keyboardRotateLeftRight * timeStep;
+	const shipRotateVelocity = self.keyboardRotateLeftRight * timeStep;
 	// Rotate the spaceship around the up axis (y axis).
-	let matrix = mat4AxisAngle(mat4Identity(), self.upAxis, self.shipRotateVelocity);
+	matrix = mat4AxisAngle(matrix, self.normal, shipRotateVelocity);
 	
 	// Find the angle from the last position to the current if there is none don't rotate.
 	if (Math.abs(angle) > 0.00001)
@@ -401,7 +490,7 @@ function matrixMotion(modelViewMatrix, timeStep, self)
 	}
 	
 	// Rotate the forward axis (z axis) with a matrix that has all of the axis angle rotations.
-	matrix = mat4Translation(matrix, self.forwardAxis)
+	matrix = mat4Translation(matrix, self.forwardAxis);
 	// (Green Line)
 	self.forwardAxis = vec3TranslationMat4(matrix);
 	// (Blue Line)
@@ -410,6 +499,11 @@ function matrixMotion(modelViewMatrix, timeStep, self)
 	self.rightAxis = vec3CrossProduct(self.upAxis, self.forwardAxis);
 	// Move the spaceship forward when the keyboard is pressed.
 	self.shipVelocity = vec3MultiplyScalar(self.forwardAxis, self.keyboardForwardBackward);
+	// Make the spaceship jump when the keyboard is pressed.
+	self.shipVelocity = vec3Add(self.shipVelocity, vec3MultiplyScalar(self.upAxis, self.keyboardUpDown));
+	// Make the spaceship strafe when the keyboard is pressed.
+	self.shipVelocity = vec3Add(self.shipVelocity, vec3MultiplyScalar(self.rightAxis, self.keyboardLeftRight));
+
 	// Find position change.
 	self.shipPosition = vec3Add(self.shipPosition, vec3MultiplyScalar(self.shipVelocity, timeStep));
 	
@@ -419,27 +513,31 @@ function matrixMotion(modelViewMatrix, timeStep, self)
 	matrixAxes[0] = self.rightAxis[0];
 	matrixAxes[1] = self.rightAxis[1];
 	matrixAxes[2] = self.rightAxis[2];
-	matrixAxes[3] = 0;
 	
-	matrixAxes[4] = self.upAxis[0];
-	matrixAxes[5] = self.upAxis[1];
-	matrixAxes[6] = self.upAxis[2];
-	matrixAxes[7] = 0;
+	matrixAxes[3] = self.upAxis[0];
+	matrixAxes[4] = self.upAxis[1];
+	matrixAxes[5] = self.upAxis[2];
 	
-	matrixAxes[8] = self.forwardAxis[0];
-	matrixAxes[9] = self.forwardAxis[1];
-	matrixAxes[10] = self.forwardAxis[2];
-	matrixAxes[11] = 0;
-
-	matrixAxes[12] = 0;
-	matrixAxes[13] = 0;
-	matrixAxes[14] = 0;
-	matrixAxes[15] = 1;
-
-	// Add the position to the main matrix
-	modelViewMatrix = mat4Translation(modelViewMatrix, self.shipPosition);
-	// Add the rotation matrix to the main matrix
-	modelViewMatrix = mat4Multiply(matrixAxes, modelViewMatrix);
+	matrixAxes[6] = self.forwardAxis[0];
+	matrixAxes[7] = self.forwardAxis[1];
+	matrixAxes[8] = self.forwardAxis[2];
 	
-	return modelViewMatrix;
+	// Transpose the rotation of the camera and fly around the planet
+	if (self.inverted === true)
+	{
+		matrixAxes = mat3Transpose(matrixAxes);
+	}
+// Euler with row major matrix YXZ
+	self.shipAngle[0] = Math.asin(-matrixAxes[5]); // mat[3][2] Pitch
+	
+	if (Math.cos(self.shipAngle[0]) > 0.0001) // 0.0001 Not at poles
+    {
+		self.shipAngle[1] = Math.atan2(matrixAxes[2], matrixAxes[8]); // mat[3][1], mat[3][3] Yaw
+        self.shipAngle[2] = Math.atan2(matrixAxes[3], matrixAxes[4]); // mat[1][2], mat[2][2] Roll
+	}
+	else
+    {
+		self.shipAngle[1] = 0; // Yaw
+        self.shipAngle[2] = Math.atan2(-matrixAxes[1], matrixAxes[0]); // mat[2][1], mat[1][1] Roll
+    }
 }
