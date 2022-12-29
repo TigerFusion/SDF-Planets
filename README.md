@@ -3,9 +3,9 @@ This project uses JavaScript and WebGL to create signed distance field planets. 
 
 <b>Keyboard Controls</b>
 
-Up, down, left, and right arrow keys to move.
-Spacebar to switch between SDF planets. 
-Hold down left mouse button and drag to rotate the scene.
+Up, down, left, and right arrow keys to move.<br>
+Spacebar to switch between SDF planets.<br>
+Hold down left mouse button and drag to rotate the scene.<br>
 Press i to invert the motion of the player on the planet.
 
 Test it out here: https://tigerfusion.github.io/SDF-Planets/
