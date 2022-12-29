@@ -1,14 +1,18 @@
-# Planet Physics with SDFs Version 1.0.0 3b4
-This project uses JavaScript and WebGL to create signed distance field planets. This code is inspired by Super Mario Galaxy and Planetary Annihilation. There are three SDF planets I created (a plane, sphere, and box) but there are plenty more you could try. Also try combining planets with the Union, Subtract, and Intersect functions. All that is needed to create a working planet is gravity and normal vectors pointing away from the shape’s surface.
+# Planet Physics with SDFs Version 1.1 5b2
+This project uses JavaScript and WebGL to create signed distance field planets. This code is inspired by Super Mario Galaxy and Planetary Annihilation. There are three SDF planets I created (a plane, sphere, and box) but there are plenty more you could try. Also you can try primitive combinations of the sdf planets with the Union, Subtract, and Intersect functions. All that is needed to create a working planet is gravity and normal vectors pointing away from the shape’s surface.
 
-Keyboard Controls
+<b>Keyboard Controls</b>
 
-Use the up, down, left, and right arrow keys to move and spacebar to switch between SDF planets. Click and drag the mouse to rotate the scene.
+Up, down, left, and right arrow keys to move.
+Spacebar to switch between SDF planets. 
+Hold down left mouse button and drag to rotate the scene.
+Press i to invert the motion of the player on the planet.
 
 Test it out here: https://tigerfusion.github.io/SDF-Planets/
 
-Lessons Learned
+Lessons Learned:
 
-For rotation use Matrices or Quaternions not Euler. If you are importing Euler angles you are fine but you will find all kinds of problems returning Euler angles. This project's motion is a matrix function I made called matrixMotion() in world.js but could easily be tweaked for quaternions. 
+Euler angles can be used with matrices you just have to careful what order they are sent in and taken out. Note that the matrixMotion() function only needs a normalized vector to orient the player sphere to the planet. Also the matrixMotion() function will probably work with quaternions I just like using matrices better when working with euler angles.
 
-If you are wondering how long it took to figure this out it took me almost a year of extra time.
+For more SDF shapes and the functions for combining primitives check this article out:
+https://iquilezles.org/articles/distfunctions/
