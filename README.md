@@ -3,7 +3,7 @@ This project uses JavaScript and WebGL to create signed distance field planet ph
 
 <b>Keyboard Controls:</b>
 
-1) Up, down, left, and right arrow keys or "q", "w", "e", "a", "s", and "d" to move.<br>
+1) Up, down, left, and right arrow keys or "q", "w", "e", "a", "s", and "d" to move. "0" to jump<br>
 2) Spacebar to switch between SDF planets.<br>
 3) Hold down left mouse button and drag to rotate the scene.<br>
 4) Press i to invert the motion of the player on the planet.
