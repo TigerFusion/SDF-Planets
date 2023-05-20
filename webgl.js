@@ -28,6 +28,16 @@ function dotProductVec3(left, right)
 
 // MARK: - Vectors
 
+function vec3RadFromDeg(deg)
+{
+	return [radiansFromDegrees(deg[0]),radiansFromDegrees(deg[1]),radiansFromDegrees(deg[2])];
+}
+
+function vec3DegFromRad(rad)
+{
+	return [degreesFromRadians(rad[0]),degreesFromRadians(rad[1]),degreesFromRadians(rad[2])];
+}
+
 function vec3Add(left, right)
 {
 	return [
@@ -73,10 +83,39 @@ function vec3MultiplyScalar(vector, scalar)
 	return [vector[0] * scalar, vector[1] * scalar, vector[2] * scalar];
 }
 
+// For a 3x3 matrix
+function vec3TransformMat3(matrix, vector)
+{
+	return [
+		vector[0] * matrix[0] + vector[1] * matrix[3] + vector[2] * matrix[6],
+		vector[0] * matrix[1] + vector[1] * matrix[4] + vector[2] * matrix[7],
+		vector[0] * matrix[2] + vector[1] * matrix[5] + vector[2] * matrix[8]
+	];
+}
+
+function vec3TransformMat4(matrix, vector)
+{
+	return [
+		vector[0] * matrix[0] + vector[1] * matrix[4] + vector[2] * matrix[8] + 1 * matrix[12],
+		vector[0] * matrix[1] + vector[1] * matrix[5] + vector[2] * matrix[9] + 1 * matrix[13],
+		vector[0] * matrix[2] + vector[1] * matrix[6] + vector[2] * matrix[10] + 1 * matrix[14]
+	];
+}
+
 // For a 4x4 matrix
 function vec3TranslationMat4(matrix)
 {
 	return [matrix[12], matrix[13], matrix[14]];
+}
+
+function vec3Angle(vector1, vector2)
+{
+	return Math.acos(dotProductVec3(vec3Normalize(vector1), vec3Normalize(vector2)));
+}
+
+function vec3Axis(vector1, vector2)
+{
+	return vec3Normalize(vec3CrossProduct(vector1, vector2));
 }
 
 // MARK: - Matrices
@@ -137,43 +176,44 @@ function mat4Frustum(matrix, left, right, bottom, top, near, far)
     ], matrix);
 }
 
-// This matrix uses YXZ matrix
+// Taken from here: https://en.wikipedia.org/wiki/Euler_angles
+// This matrix uses a XYZ Euler Matrix
 function mat4EulerAngle(oldMatrix, radians)
 {
-	const matrix = [];
+	let matrix = [];
 	
-	// This matrix uses YXZ matrix
-	// Yaw = Y, Pitch = X, Roll = Z
-	const cosY = Math.cos(radians[1]); // Yaw
-	const sinY = Math.sin(radians[1]);
-
-	const cosP = Math.cos(radians[0]); // Pitch
-	const sinP = Math.sin(radians[0]);
-
-    const cosR = Math.cos(radians[2]); // Roll
-    const sinR = Math.sin(radians[2]);
+	// XYZ coordinates below
+	// X1
+	let cos1 = Math.cos(-radians[0]);
+	let sin1 = Math.sin(-radians[0]);
+	// Y1
+	let cos2 = Math.cos(-radians[1]);
+	let sin2 = Math.sin(-radians[1]);
+	// Z2
+	let cos3 = Math.cos(-radians[2]);
+	let sin3 = Math.sin(-radians[2]);
 	
-	// Matrix is column major and cos/sin are Row Major aka Row|Column 
-	matrix[0] = cosY * cosR + sinY * sinP * sinR; // 11
-	matrix[1] = cosR * sinY * sinP - sinR * cosY; // 12
-	matrix[2] = cosP * sinY; // 13
+	// Matrix is cos/sin row Major aka Row|Column 
+	matrix[0] = cos2 * cos3; // 11
+	matrix[1] = -cos2 * sin3; // 12
+	matrix[2] = sin2; // 13
 	matrix[3] = 0;
 
-	matrix[4] = cosP * sinR; // 21
-	matrix[5] = cosR * cosP; // 22
-	matrix[6] = -sinP; // 23
+	matrix[4] = cos1 * sin3 + cos3 * sin1 * sin2; // 21
+	matrix[5] = cos1 * cos3 - sin1 * sin2 * sin3; // 22
+	matrix[6] = -cos2 * sin1; // 23
 	matrix[7] = 0;
 	
-	matrix[8] = sinR * cosY * sinP - sinY * cosR; // 31
-	matrix[9] = sinY * sinR + cosR * cosY * sinP; // 32
-	matrix[10] = cosP * cosY; // 33
+	matrix[8] = sin1 * sin3 - cos1 * cos3 * sin2; // 31
+	matrix[9] = cos3 * sin1 + cos1 * sin2 * sin3; // 32
+	matrix[10] = cos1 * cos2; // 33
 	matrix[11] = 0;
 	
 	matrix[12] = 0;
 	matrix[13] = 0;
 	matrix[14] = 0;
 	matrix[15] = 1;
-	
+
 	return mat4Multiply(matrix, oldMatrix);
 }
 

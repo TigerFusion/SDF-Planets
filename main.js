@@ -9,7 +9,6 @@ var VSHADER_SQUARE_SOURCE =
 "void main()\n" +
 "{\n" +
 "	gl_Position = u_ProjectionMatrix * u_ModelViewMatrix * vec4(a_Position, 1.0);\n" +
-" 	gl_PointSize = 10.0;\n" +
 "}\n";
 
 var FSHADER_SQUARE_SOURCE =
@@ -392,7 +391,8 @@ Project.prototype.update = function(world)
 		modelViewMatrix = mat4AxisAngle(modelViewMatrix, [0, 1, 0], radiansFromDegrees(self.dragAngleY));
 		modelViewMatrix = mat4Translation(modelViewMatrix, [0, 0, 10]);
 	
-		modelViewMatrix = mat4Translation(modelViewMatrix, world.planet.cameraStartPosition);
+		modelViewMatrix = mat4Translation(modelViewMatrix, world.planet.cameraPosition);
+		modelViewMatrix = mat4EulerAngle(modelViewMatrix, world.planet.cameraAngle);
 
 		// This keeps the axes centered correctly whether inverted or not
 		if (world.planet.inverted === true)
@@ -406,19 +406,16 @@ Project.prototype.update = function(world)
 		
 		gl.uniformMatrix4fv(self.shaderProgram.u_ModelViewMatrix, false, modelViewMatrix);
 
-	// Green Line forward Axis
+	// Blue Line forward Axis
 		self.wireVector = lineWire(gl, [0,0,0], vec3MultiplyScalar(world.planet.forwardAxis,-1));
 		
-		gl.uniform4f(self.shaderProgram.u_Color, 0, 1, 0, 1);
+		gl.uniform4f(self.shaderProgram.u_Color, 0, 0, 1, 1);
 		gl.bindBuffer(gl.ARRAY_BUFFER, self.wireVector.vertexBuffer);
 		gl.vertexAttribPointer(self.shaderProgram.a_Position, 3, gl.FLOAT, false, 0, 0);
 		
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.wireVector.indexBuffer);
 		gl.drawElements(gl.LINES, self.wireVector.indicesLength, gl.UNSIGNED_SHORT, 0);
 		
-		gl.deleteBuffer(self.wireVector.vertexBuffer);
-		gl.deleteBuffer(self.wireVector.indexBuffer);
-
 	// Red line right axis
 		self.wireVector = lineWire(gl, [0,0,0], world.planet.rightAxis);
 
@@ -429,21 +426,15 @@ Project.prototype.update = function(world)
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.wireVector.indexBuffer);
 		gl.drawElements(gl.LINES, self.wireVector.indicesLength, gl.UNSIGNED_SHORT, 0);
 
-		gl.deleteBuffer(self.wireVector.vertexBuffer);
-		gl.deleteBuffer(self.wireVector.indexBuffer);
-
-	// Blue line up Axis
+	// Green line is up Axis
 		self.wireVector = lineWire(gl, [0,0,0], world.planet.upAxis);
 
-		gl.uniform4f(self.shaderProgram.u_Color, 0, 0, 1, 1);
+		gl.uniform4f(self.shaderProgram.u_Color, 0, 1, 0, 1);
 		gl.bindBuffer(gl.ARRAY_BUFFER, self.wireVector.vertexBuffer);
 		gl.vertexAttribPointer(self.shaderProgram.a_Position, 3, gl.FLOAT, false, 0, 0);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.wireVector.indexBuffer);
 		gl.drawElements(gl.LINES, self.wireVector.indicesLength, gl.UNSIGNED_SHORT, 0);
-
-		gl.deleteBuffer(self.wireVector.vertexBuffer);
-		gl.deleteBuffer(self.wireVector.indexBuffer);
 
 		window.requestAnimationFrame(updateAnimation);
 	}
